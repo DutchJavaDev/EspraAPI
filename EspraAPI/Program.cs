@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using EspraAPI.Identity;
@@ -9,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
-using Sentry.AspNetCore;
 using Sentry;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,12 +33,14 @@ var ValidIssuer = builder.Configuration["JWT:ValidIssuer"];
 var Secret = builder.Configuration["JWT:Secret"];
 
 // JWT
-builder.Services.AddAuthentication(options => {
+builder.Services.AddAuthentication(options =>
+{
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-    .AddJwtBearer(options => {
+    .AddJwtBearer(options =>
+    {
         options.SaveToken = true;
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters()
@@ -82,11 +81,13 @@ app.UseSentryTracing();
 
 
 #region Route mappings
-app.MapPost("api/login", async (UserManager<AuthenticationUser> userManager,CancellationToken token,[FromBody] LoginModel model) => {
+app.MapPost("api/login", async (UserManager<AuthenticationUser> userManager, CancellationToken token, [FromBody] LoginModel model) =>
+{
 
     var response = new LoginResponse();
 
-    await Task.Run(async () => {
+    await Task.Run(async () =>
+    {
 
         var user = await userManager.FindByEmailAsync(model.UserName);
 
@@ -115,23 +116,28 @@ app.MapPost("api/login", async (UserManager<AuthenticationUser> userManager,Canc
     return response;
 });
 
-app.MapGet("api/collections", [Authorize(Roles = "Admin")] () => {
-    return "List of collections";
+app.MapGet("api/groups", [Authorize(Roles = "Admin")] () =>
+{
+    return "List of groups, not the data but group names";
 });
 
-app.MapPost("api/add/data/json/{group}", [Authorize(Roles = "Admin")] (string group, JsonService jsonService) => {
+app.MapPost("api/add/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
+{
+    return await jsonService.Add(group, data, token) ? Results.Ok() : Results.BadRequest();
+});
+
+app.MapGet("api/get/json/{group}", [Authorize(Roles = "Admin,Web")] async (string group, JsonService jsonService) =>
+{
+    return Results.Ok(await jsonService.GetGroup(group));
+});
+
+app.MapPost("api/update/json", [Authorize(Roles = "Admin")] () =>
+{
 
 });
 
-app.MapGet("api/get/json", [Authorize(Roles = "Admin,Web")] () => {
-
-});
-
-app.MapPost("api/update/json", [Authorize(Roles = "Admin")] () => {
-
-});
-
-app.MapDelete("api/delete/json", [Authorize(Roles = "Admin")] () => {
+app.MapDelete("api/delete/json", [Authorize(Roles = "Admin")] () =>
+{
 
 });
 #endregion
@@ -141,7 +147,7 @@ using (var scope = app.Services.CreateAsyncScope())
 {
     await CreateRoles(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
 
-    await CreateDefaultAccount(scope.ServiceProvider.GetRequiredService<UserManager<AuthenticationUser>>(), 
+    await CreateDefaultAccount(scope.ServiceProvider.GetRequiredService<UserManager<AuthenticationUser>>(),
         scope.ServiceProvider.GetRequiredService<IConfiguration>());
 }
 
@@ -155,7 +161,8 @@ async static Task CreateRoles(RoleManager<IdentityRole> roleManager)
     {
         if (!await roleManager.RoleExistsAsync(role))
         {
-            await roleManager.CreateAsync(new IdentityRole {
+            await roleManager.CreateAsync(new IdentityRole
+            {
                 Name = role
             });
         }
@@ -176,8 +183,17 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
 
         if (!createResult.Succeeded)
         {
-            
-            SentrySdk.CaptureMessage("", SentryLevel.Error);
+            var builder = new StringBuilder();
+
+            builder.AppendLine("Failed to create default user");
+            builder.AppendLine("");
+
+            foreach (var error in createResult.Errors)
+            {
+                builder.AppendLine($"code={error.Code} | {error.Description}");
+            }
+
+            SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
         }
         else
         {
@@ -185,8 +201,17 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
 
             if (!rollResult.Succeeded)
             {
-                // Welp!
-                // Log this or send an email or some shit i guess
+                var builder = new StringBuilder();
+
+                builder.AppendLine("Failed to add admin role to default user");
+                builder.AppendLine("");
+
+                foreach (var error in rollResult.Errors)
+                {
+                    builder.AppendLine($"code={error.Code} | {error.Description}");
+                }
+
+                SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
             }
         }
     }

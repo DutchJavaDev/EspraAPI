@@ -1,8 +1,9 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
-using System.Linq;
+using Sentry;
 using System.Dynamic;
+using System.Text.Json;
 
 namespace EspraAPI.Service
 {
@@ -32,7 +33,7 @@ namespace EspraAPI.Service
                 await JsonCollection.InsertOneAsync(new JsonData
                 {
                     GroupId = group,
-                    Data = data,
+                    Data = JsonSerializer.Serialize(data),
                     DateAdded = DateTime.Now,
                     LastModified = DateTime.Now
                 },
@@ -40,8 +41,9 @@ namespace EspraAPI.Service
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                SentrySdk.CaptureException(e);
                 return false;
             }
         }
@@ -62,8 +64,9 @@ namespace EspraAPI.Service
                         return obj;
                     }).ToList();
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                SentrySdk.CaptureException(e);
                 return new List<dynamic>();
             }
         }
@@ -78,7 +81,7 @@ namespace EspraAPI.Service
 
         public string GroupId { get; set; } = string.Empty;
 
-        public object Data { get; set; } = string.Empty;
+        public string Data { get; set; } = string.Empty;
 
         public DateTime DateAdded { get; set; } = DateTime.Now;
 
