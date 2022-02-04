@@ -48,7 +48,7 @@ namespace EspraAPI.Service
             }
         }
 
-        public async Task<IList<dynamic>> GetGroup(string group)
+        public async Task<IList<dynamic>> Get(string group)
         {
             try
             {

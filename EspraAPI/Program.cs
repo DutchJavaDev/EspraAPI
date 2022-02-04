@@ -128,7 +128,7 @@ app.MapPost("api/add/json/{group}", [Authorize(Roles = "Admin")] async (string g
 
 app.MapGet("api/get/json/{group}", [Authorize(Roles = "Admin,Web")] async (string group, JsonService jsonService) =>
 {
-    return Results.Ok(await jsonService.GetGroup(group));
+    return Results.Ok(await jsonService.Get(group));
 });
 
 app.MapPost("api/update/json", [Authorize(Roles = "Admin")] () =>
