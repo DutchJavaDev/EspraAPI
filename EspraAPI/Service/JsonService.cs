@@ -9,31 +9,28 @@ namespace EspraAPI.Service
 {
     public class JsonService
     {
-        public IConfiguration Configuration;
+        private readonly string CollectionName;
+        private IMongoCollection<JsonData>? JsonCollection;
+        private IMongoDatabase Database { get; set; }
 
-        private IMongoCollection<JsonData> JsonCollection { get; set; }
-
-        public JsonService(IConfiguration configuration)
+        public JsonService(IMongoClient mongoClient, IConfiguration configuration)
         {
-            Configuration = configuration;
-
-            var url = Configuration["MONGO:DEV_URL"];
-            var _database = Configuration["MONGO:DATBASE"];
-            var _collection = Configuration["MONGO:JSON_COLLECTION"];
-
-            var mongoClient = new MongoClient(url);
-            var database = mongoClient.GetDatabase(_database);
-            JsonCollection = database.GetCollection<JsonData>(_collection);
+            Database = mongoClient.GetDatabase(configuration["MONGO:DATBASE"]);
+            CollectionName = configuration["MONGO:JSON_COLLECTION"];
         }
 
-        public async Task<bool> Add(string group, object data, CancellationToken token)
+        public async Task<bool> Add(string group, object content, CancellationToken token)
         {
             try
             {
+                token.ThrowIfCancellationRequested();
+
+                JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
                 await JsonCollection.InsertOneAsync(new JsonData
                 {
                     GroupId = group,
-                    Data = JsonSerializer.Serialize(data),
+                    Data = JsonSerializer.Serialize(content.ToString()),
                     DateAdded = DateTime.Now,
                     LastModified = DateTime.Now
                 },
@@ -52,14 +49,18 @@ namespace EspraAPI.Service
         {
             try
             {
-                return (await JsonCollection.Find(i => i.GroupId == group).ToListAsync())
+                //token.ThrowIfCancellationRequested();
+
+                JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
+            return (await JsonCollection.Find(i => i.GroupId == group).ToListAsync())
                     .Select(i => {
-                        
+
                         dynamic obj = new ExpandoObject();
-                        
+
                         obj.id = i.Id;
                         obj.group = i.GroupId;
-                        obj.data = i.Data;
+                        obj.data = JsonSerializer.Deserialize<string>(i.Data);
 
                         return obj;
                     }).ToList();
@@ -69,6 +70,44 @@ namespace EspraAPI.Service
                 SentrySdk.CaptureException(e);
                 return new List<dynamic>();
             }
+        }
+
+        public async Task<bool> Update(string id, dynamic data, CancellationToken token, string overrwite = default)
+        {
+            return await Task.Run( async () => {
+
+                var result = false;
+
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    token.ThrowIfCancellationRequested();
+
+                    JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
+
+                    var old = (await JsonCollection.FindAsync(i => i.Id == id,cancellationToken: token)).First(cancellationToken: token);
+
+                    var filter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
+
+
+                    var update = Builders<JsonData>.Update.Set(nameof(JsonData.Data), data);
+
+                    var updateResult = JsonCollection.UpdateOne(filter, update, cancellationToken: token);
+
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    if (e is not OperationCanceledException)
+                        SentrySdk.CaptureException(e);
+
+                    result = false;
+                }
+
+                return result;
+            }, token);
         }
 
     }
@@ -82,6 +121,8 @@ namespace EspraAPI.Service
         public string GroupId { get; set; } = string.Empty;
 
         public string Data { get; set; } = string.Empty;
+
+        public string Json { get; set; } = string.Empty;
 
         public DateTime DateAdded { get; set; } = DateTime.Now;
 

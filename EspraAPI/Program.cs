@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Sentry;
+using MongoDB.Driver;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +65,12 @@ builder.Services.AddSwaggerGen();
 
 // Custom Services
 builder.Services.AddTransient<JsonService>();
+
+    // 
+var url = builder.Configuration["MONGO:DEV_URL"];
+IMongoClient mongoClient = new MongoClient(url);
+
+builder.Services.AddSingleton(mongoClient);
 
 var app = builder.Build();
 
@@ -121,7 +129,7 @@ app.MapGet("api/groups", [Authorize(Roles = "Admin")] () =>
     return "List of groups, not the data but group names";
 });
 
-app.MapPost("api/add/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
+app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
 {
     return await jsonService.Add(group, data, token) ? Results.Ok() : Results.BadRequest();
 });
@@ -131,9 +139,9 @@ app.MapGet("api/get/json/{group}", [Authorize(Roles = "Admin,Web")] async (strin
     return Results.Ok(await jsonService.Get(group));
 });
 
-app.MapPost("api/update/json", [Authorize(Roles = "Admin")] () =>
+app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token) =>
 {
-
+    return (await jsonService.Update(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
 });
 
 app.MapDelete("api/delete/json", [Authorize(Roles = "Admin")] () =>
