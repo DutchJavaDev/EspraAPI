@@ -13,116 +13,97 @@ namespace EspraAPI.Service
         private IMongoCollection<JsonData>? JsonCollection;
         private IMongoDatabase Database { get; set; }
 
+        [ActivatorUtilitiesConstructor]
         public JsonService(IMongoClient mongoClient, IConfiguration configuration)
         {
             Database = mongoClient.GetDatabase(configuration["MONGO:DATBASE"]);
             CollectionName = configuration["MONGO:JSON_COLLECTION"];
         }
 
-        public async Task<bool> Add(string group, object content, CancellationToken token)
+        public JsonService(IMongoDatabase mongoDatabase, string collection)
         {
-            try
-            {
-                token.ThrowIfCancellationRequested();
-
-                JsonCollection = Database.GetCollection<JsonData>(CollectionName);
-
-                await JsonCollection.InsertOneAsync(new JsonData
-                {
-                    GroupId = group,
-                    Data = JsonSerializer.Serialize(content.ToString()),
-                    DateAdded = DateTime.Now,
-                    LastModified = DateTime.Now
-                },
-                    cancellationToken: token);
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                SentrySdk.CaptureException(e);
-                return false;
-            }
+            Database = mongoDatabase;
+            CollectionName = collection;
         }
 
-        public async Task<IList<dynamic>> Get(string group)
+        public async Task<JsonData> GetByIdAsync(string id)
+        {
+            return await JsonCollection.Find(i => i.Id.Equals(id)).FirstAsync();
+        }
+
+        public async Task<bool> AddAsync(string group, string content, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
+            await JsonCollection.InsertOneAsync(new JsonData
+            {
+                GroupId = group,
+                Data = content,
+                DateAdded = DateTime.Now,
+                LastModified = DateTime.Now
+            },
+                cancellationToken: token);
+
+            return true;
+        }
+
+        public async Task<IList<JsonData>> GetAsync(string group)
         {
             try
             {
                 //token.ThrowIfCancellationRequested();
-
                 JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
-            return (await JsonCollection.Find(i => i.GroupId == group).ToListAsync())
-                    .Select(i => {
+                await JsonCollection.Database.Client.StartSessionAsync();
 
-                        dynamic obj = new ExpandoObject();
+                var collection = await JsonCollection.Find(i => i.GroupId == group).ToListAsync();
 
-                        obj.id = i.Id;
-                        obj.group = i.GroupId;
-                        obj.data = JsonSerializer.Deserialize<string>(i.Data);
-
-                        return obj;
-                    }).ToList();
+                return collection.ToList();
             }
             catch (Exception e)
             {
                 SentrySdk.CaptureException(e);
-                return new List<dynamic>();
+                return new List<JsonData>();
             }
         }
 
-        public async Task<bool> Update(string id, dynamic data, CancellationToken token, string overrwite = default)
+        public async Task<bool> UpdateAsync(string id, string data, CancellationToken token)
         {
-            return await Task.Run( async () => {
+            JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
-                var result = false;
+            var old = (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).First(cancellationToken: token);
 
-                try
-                {
-                    token.ThrowIfCancellationRequested();
+            var filter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
 
-                    token.ThrowIfCancellationRequested();
+            var update = Builders<JsonData>.Update.Set(nameof(JsonData.Data), data);
 
-                    JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+            var updateResult = await JsonCollection.
+                UpdateOneAsync(filter, update);
 
-
-                    var old = (await JsonCollection.FindAsync(i => i.Id == id,cancellationToken: token)).First(cancellationToken: token);
-
-                    var filter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
-
-
-                    var update = Builders<JsonData>.Update.Set(nameof(JsonData.Data), data);
-
-                    var updateResult = JsonCollection.UpdateOne(filter, update, cancellationToken: token);
-
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    if (e is not OperationCanceledException)
-                        SentrySdk.CaptureException(e);
-
-                    result = false;
-                }
-
-                return result;
-            }, token);
+            return updateResult.IsAcknowledged;
         }
 
+
+        public async Task<bool> DeleteAsync(string id, CancellationToken token)
+        {
+            JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
+            var deleteResult = await JsonCollection.DeleteOneAsync(i => i.Id == id, token);
+
+            return deleteResult.IsAcknowledged;
+        }
     }
 
     public class JsonData 
     {
         [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
 
         public string GroupId { get; set; } = string.Empty;
 
         public string Data { get; set; } = string.Empty;
-
-        public string Json { get; set; } = string.Empty;
 
         public DateTime DateAdded { get; set; } = DateTime.Now;
 
