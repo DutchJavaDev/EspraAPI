@@ -7,7 +7,6 @@ using EspraAPI.Service;
 using System.Dynamic;
 using System.Text.Json;
 using System.Linq;
-using MongoDB.Bson;
 
 namespace EspraUnitTest
 {
@@ -30,7 +29,7 @@ namespace EspraUnitTest
             client.DropDatabase(Database);
         }
 
-        [Fact]
+        [Fact(DisplayName = "Add jsondata en verfify that it has been created")] 
         public async void Add_JSON_Data()
         {
             var json = await CreateService();
@@ -38,9 +37,15 @@ namespace EspraUnitTest
             var addResult = await json.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
 
             Assert.True(addResult);
+
+            CancellationTokenSource = new CancellationTokenSource();
+
+            var collection = await json.GetAsync("test", CancellationTokenSource.Token);
+
+            Assert.Equal(1, collection.Count);
         }
 
-        [Fact]
+        [Fact(DisplayName = "Get a jsondata object and verify the data")] 
         public async void Get_JSON_Data()
         {
             var json = await CreateService();
@@ -49,7 +54,9 @@ namespace EspraUnitTest
 
             Assert.True(addResult);
 
-            var getResult = await json.GetAsync("test");
+            CancellationTokenSource = new CancellationTokenSource();
+
+            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
              
@@ -60,7 +67,8 @@ namespace EspraUnitTest
             Assert.Equal("TestObject", JsonSerializer.Deserialize<string>(data?.Name));
         }
 
-        [Fact]
+
+        [Fact(DisplayName = "Update a exisitng jsondata by changing its Data field and verify that is has been updated")] 
         public async void Update_JSON_Data()
         {
             var json = await CreateService();
@@ -69,7 +77,9 @@ namespace EspraUnitTest
 
             Assert.True(addResult);
 
-            var getResult = await json.GetAsync("test");
+            CancellationTokenSource = new CancellationTokenSource();
+
+            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -78,7 +88,6 @@ namespace EspraUnitTest
             dynamic? data = JsonSerializer.Deserialize<ExpandoObject?>(obj.Data);
 
             Assert.Equal("TestObject", JsonSerializer.Deserialize<string>(data?.Name));
-
 
             CancellationTokenSource = new CancellationTokenSource();
 
@@ -95,7 +104,9 @@ namespace EspraUnitTest
 
             Assert.Equal(update, result.Data);
 
-            var collectionResult = await json.GetAsync("test");
+            CancellationTokenSource = new CancellationTokenSource();
+
+            var collectionResult = await json.GetAsync("test", CancellationTokenSource.Token);
 
             Assert.True(collectionResult.Count > 0);
 
@@ -104,7 +115,7 @@ namespace EspraUnitTest
             Assert.Equal(update, result.Data);
         }
 
-        [Fact]
+        [Fact(DisplayName = "Delete jsondata by its id")]
         public async void Delete_JSON_Data()
         {
             var json = await CreateService();
@@ -113,7 +124,9 @@ namespace EspraUnitTest
 
             Assert.True(addResult);
 
-            var getResult = await json.GetAsync("test");
+            CancellationTokenSource = new CancellationTokenSource();
+
+            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -126,6 +139,12 @@ namespace EspraUnitTest
             var deleteResult = await json.DeleteAsync(id, CancellationTokenSource.Token);
 
             Assert.True(deleteResult);
+
+            CancellationTokenSource = new CancellationTokenSource();
+
+            getResult = await json.GetAsync("test", CancellationTokenSource.Token);
+
+            Assert.Empty(getResult);
         }
 
         private async static Task<JsonService> CreateService()
@@ -159,6 +178,7 @@ namespace EspraUnitTest
             _object.Name = "TestObject";
             _object.Description = false;
             _object.Obj = new object();
+
             return JsonSerializer.Serialize(_object);
 
         }
