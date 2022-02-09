@@ -9,7 +9,6 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Sentry;
 using MongoDB.Driver;
-using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +63,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Custom Services
+builder.Services.AddTransient<AuthenticationService>();
 builder.Services.AddTransient<JsonService>();
 
     // 
@@ -87,67 +87,63 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseSentryTracing();
 
+var json = "application/json";
 
 #region Route mappings
-app.MapPost("api/login", async (UserManager<AuthenticationUser> userManager, CancellationToken token, [FromBody] LoginModel model) =>
+app.MapPost("api/login", async (AuthenticationService authentication, CancellationToken token, [FromBody] LoginModel model) =>
 {
+    var loginResult = await authentication.Login(model);
 
-    var response = new LoginResponse();
+    return loginResult.Success ? Results.Ok(loginResult) : Results.BadRequest(loginResult);
 
-    await Task.Run(async () =>
-    {
-
-        var user = await userManager.FindByEmailAsync(model.UserName);
-
-        if (user == null)
-        {
-            response.Message = "User not found";
-            return;
-        }
-
-        var loginResult = await userManager.CheckPasswordAsync(user, model.Password);
-
-        if (loginResult)
-        {
-            var roles = await userManager.GetRolesAsync(user);
-
-            response.Message = "Hello Admin";
-            response.Token = JWT.GenerateJWT(user.UserName, roles);
-        }
-        else
-        {
-            response.Message = "Invalid Login";
-        }
-
-    }, token);
-
-    return response;
-});
-
-app.MapGet("api/groups", [Authorize(Roles = "Admin")] () =>
-{
-    return "List of groups, not the data but group names";
-});
+}).Accepts<LoginModel>(json)
+.Produces<LoginResponse>(StatusCodes.Status200OK)
+.Produces<LoginResponse>(StatusCodes.Status400BadRequest)
+.WithDisplayName("Login route");
 
 app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
 {
     return await jsonService.AddAsync(group, data, token) ? Results.Ok() : Results.BadRequest();
-});
+}).Accepts<dynamic>(json)
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("New jsondata entry");
 
-app.MapGet("api/get/json/{group}", [Authorize(Roles = "Admin,Web")] async (string group, JsonService jsonService) =>
+
+app.MapGet("api/get/json/groupId/{group}", [Authorize(Roles = "Admin")] async (string group, CancellationToken token, JsonService jsonService) =>
 {
-    return Results.Ok(await jsonService.GetAsync(group));
-});
+    return await jsonService.GetAsync(group, token);
+}).Accepts<string>(json)
+.Produces<IList<JsonData>>(StatusCodes.Status200OK)
+.WithDisplayName("Gets all data grouped by groupId");
+
+app.MapGet("api/get/json/id/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
+{
+    var result = await jsonService.GetByIdAsync(id);
+
+    return ! (result == null) ? Results.Ok(result) : Results.BadRequest();
+}).Accepts<string>(json)
+.Produces<JsonData>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("Gets a jsondata by its documentId");
+
 
 app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token) =>
 {
     return (await jsonService.UpdateAsync(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
-});
+}).Accepts<dynamic>(json)
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("Updates an existing jsondata by its Id");
 
-app.MapDelete("api/delete/json", [Authorize(Roles = "Admin")] () =>
+
+app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
 {
-
-});
+    return (await jsonService.DeleteAsync(id, token)) ? Results.Ok() : Results.BadRequest();
+}).Accepts<dynamic>(json)
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("Deletes jsondata by its Id");
 #endregion
 
 
