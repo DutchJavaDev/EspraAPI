@@ -131,17 +131,17 @@ app.MapGet("api/groups", [Authorize(Roles = "Admin")] () =>
 
 app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
 {
-    return await jsonService.Add(group, data, token) ? Results.Ok() : Results.BadRequest();
+    return await jsonService.AddAsync(group, data, token) ? Results.Ok() : Results.BadRequest();
 });
 
 app.MapGet("api/get/json/{group}", [Authorize(Roles = "Admin,Web")] async (string group, JsonService jsonService) =>
 {
-    return Results.Ok(await jsonService.Get(group));
+    return Results.Ok(await jsonService.GetAsync(group));
 });
 
 app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token) =>
 {
-    return (await jsonService.Update(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
+    return (await jsonService.UpdateAsync(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
 });
 
 app.MapDelete("api/delete/json", [Authorize(Roles = "Admin")] () =>
