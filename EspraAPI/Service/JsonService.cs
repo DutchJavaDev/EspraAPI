@@ -1,8 +1,6 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
-using Sentry;
-using System.Dynamic;
 using System.Text.Json;
 
 namespace EspraAPI.Service
@@ -31,8 +29,11 @@ namespace EspraAPI.Service
             return await JsonCollection.Find(i => i.Id.Equals(id)).FirstAsync();
         }
 
-        public async Task<bool> AddAsync(string group, string content, CancellationToken token)
+        public async Task<bool> AddAsync(string group, dynamic content, CancellationToken token)
         {
+            if (content is not string)
+                content = JsonSerializer.Serialize(content);
+
             token.ThrowIfCancellationRequested();
 
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
@@ -41,46 +42,42 @@ namespace EspraAPI.Service
             {
                 GroupId = group,
                 Data = content,
-                DateAdded = DateTime.Now,
-                LastModified = DateTime.Now
-            },
-                cancellationToken: token);
+                DateAdded = DateTime.Now.ToString(Util.DATE_FORMAT),
+                LastModified = DateTime.Now.ToString(Util.DATE_FORMAT)
+
+            },cancellationToken: token);
 
             return true;
         }
 
-        public async Task<IList<JsonData>> GetAsync(string group)
+        public async Task<IList<JsonData>> GetAsync(string group, CancellationToken token)
         {
-            try
-            {
-                //token.ThrowIfCancellationRequested();
-                JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+            token.ThrowIfCancellationRequested();
 
-                await JsonCollection.Database.Client.StartSessionAsync();
+            JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
-                var collection = await JsonCollection.Find(i => i.GroupId == group).ToListAsync();
-
-                return collection.ToList();
-            }
-            catch (Exception e)
-            {
-                SentrySdk.CaptureException(e);
-                return new List<JsonData>();
-            }
+            return await (await JsonCollection.FindAsync(i => i.GroupId == group, cancellationToken: token)).ToListAsync(cancellationToken: token);
         }
 
-        public async Task<bool> UpdateAsync(string id, string data, CancellationToken token)
+        public async Task<bool> UpdateAsync(string id, dynamic data, CancellationToken token)
         {
+            if (data is not string)
+                data = JsonSerializer.Serialize(data);
+
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
             var old = (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).First(cancellationToken: token);
 
-            var filter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
+            var updateFilter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
 
-            var update = Builders<JsonData>.Update.Set(nameof(JsonData.Data), data);
+            var dataUpdate = Builders<JsonData>.Update.Set(nameof(JsonData.Data), data);
+
+            var lastEditUpdate = Builders<JsonData>.Update.Set(nameof(JsonData.LastModified), DateTime.Now.ToString(Util.DATE_FORMAT));
+
+            var updateDefenitions = Builders<JsonData>.Update.Combine(dataUpdate, lastEditUpdate);                                
 
             var updateResult = await JsonCollection.
-                UpdateOneAsync(filter, update);
+                UpdateOneAsync(updateFilter, updateDefenitions, cancellationToken: token);
 
             return updateResult.IsAcknowledged;
         }
@@ -98,15 +95,15 @@ namespace EspraAPI.Service
 
     public class JsonData 
     {
-        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
 
         public string GroupId { get; set; } = string.Empty;
 
         public string Data { get; set; } = string.Empty;
 
-        public DateTime DateAdded { get; set; } = DateTime.Now;
+        public string DateAdded { get; set; } = string.Empty;
 
-        public DateTime LastModified { get; set; } = DateTime.Now;
+        public string LastModified { get; set; } = string.Empty;
     }
 }
