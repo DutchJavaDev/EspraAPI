@@ -9,5 +9,13 @@ namespace EspraAPI.Identity
 
         [Required(ErrorMessage = "Password is required")]
         public string Password { get; set; } = string.Empty;
+
+        public bool IsValid()
+        {
+            return !string.IsNullOrEmpty(UserName) && 
+                   !string.IsNullOrEmpty(Password) &&
+                   UserName.Length > 1 &&
+                   Password.Length > 4;
+        }
     }
 }
