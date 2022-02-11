@@ -72,7 +72,7 @@ builder.Services.AddTransient<AuthenticationService>();
 builder.Services.AddTransient<JsonService>();
 
     // 
-var url = builder.Configuration["MONGO:DEV_URL"];
+var url = builder.Configuration["MONGO:LIVE_URL"];
 IMongoClient mongoClient = new MongoClient(url);
 
 builder.Services.AddSingleton(mongoClient);
