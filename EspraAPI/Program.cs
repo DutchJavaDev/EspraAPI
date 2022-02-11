@@ -7,8 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+#if DEBUG
 using Sentry;
+#endif
 using MongoDB.Driver;
+using EspraAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +22,9 @@ var connectionString = builder.Configuration["IDENTITY:LIVE"];
 #endif
 
 // Sentry
+#if DEBUG
 builder.WebHost.UseSentry(builder.Configuration["SENTRY:DNS"]);
+#endif
 
 // Add services to the container.
 builder.Services.AddDbContext<AuthenticationDbContent>(options => options.UseSqlServer(connectionString));
@@ -56,7 +61,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-JWT.Init(ValidIssuer, ValidAudience, Secret);
+Util.Init(ValidIssuer, ValidAudience, Secret);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -85,7 +90,9 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+#if DEBUG
 app.UseSentryTracing();
+#endif
 
 var json = "application/json";
 
@@ -161,7 +168,7 @@ app.Run();
 #region Startup configuration
 async static Task CreateRoles(RoleManager<IdentityRole> roleManager)
 {
-    foreach (var role in JWT.ROLES)
+    foreach (var role in Util.ROLES)
     {
         if (!await roleManager.RoleExistsAsync(role))
         {
@@ -197,7 +204,9 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
                 builder.AppendLine($"code={error.Code} | {error.Description}");
             }
 
+#if DEBUG
             SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
+#endif
         }
         else
         {
@@ -215,7 +224,9 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
                     builder.AppendLine($"code={error.Code} | {error.Description}");
                 }
 
+#if DEBUG
                 SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
+#endif
             }
         }
     }
