@@ -37,7 +37,7 @@ namespace EspraAPI.Service
                 {
                     Success = true,
                     Message = "Authenticated successfully",
-                    Token = JWT.GenerateJWT(user.UserName, await UserManager.GetRolesAsync(user))
+                    Token = Util.GenerateJWT(user.UserName, await UserManager.GetRolesAsync(user))
                 };
             }
 
