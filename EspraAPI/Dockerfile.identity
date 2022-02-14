@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
+
+ENV ACCEPT_EULA="Y"
+ENV SA_PASSWORD=P@ssw0rd!
+ENV VIRTUAL_HOST=identity:1433
+ENV MSSQL_PID=Express
+
+EXPOSE 1433
+
+USER root
+COPY Gen/. /setup/
+RUN chmod +x /setup/run-initialization.sh
+CMD /bin/bash /setup/entrypoint.sh
