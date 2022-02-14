@@ -1,1 +1,1 @@
-./import-data.sh & /opt/mssql/bin/sqlservr
+/setup/run-initialization.sh & /opt/mssql/bin/sqlservr
