@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EspraAPI.Migrations
 {
-    [DbContext(typeof(AuthenticationDbContent))]
+    [DbContext(typeof(AuthenticationDbContext))]
     [Migration("20220203173923_auth")]
     partial class auth
     {
