@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EspraAPI.Migrations
 {
-    [DbContext(typeof(AuthenticationDbContent))]
+    [DbContext(typeof(AuthenticationDbContext))]
     partial class AuthenticationDbContentModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
