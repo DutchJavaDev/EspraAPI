@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Sentry;
 using MongoDB.Driver;
+using EspraAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +57,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-JWT.Init(ValidIssuer, ValidAudience, Secret);
+Util.Init(ValidIssuer, ValidAudience, Secret);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -161,7 +162,7 @@ app.Run();
 #region Startup configuration
 async static Task CreateRoles(RoleManager<IdentityRole> roleManager)
 {
-    foreach (var role in JWT.ROLES)
+    foreach (var role in Util.ROLES)
     {
         if (!await roleManager.RoleExistsAsync(role))
         {
