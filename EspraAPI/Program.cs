@@ -22,16 +22,18 @@ var connectionString = builder.Configuration["IDENTITY:LIVE"];
 #endif
 
 // Sentry
-#if DEBUG
 builder.WebHost.UseSentry(builder.Configuration["SENTRY:DNS"]);
-#endif
 
 // Add services to the container.
-builder.Services.AddDbContext<AuthenticationDbContent>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<AuthenticationDbContext>(
+    options => {
+        options.UseSqlServer(connectionString, _opt => _opt.EnableRetryOnFailure(20))
+        .EnableDetailedErrors();
+    });
 
 // Identity
 builder.Services.AddIdentity<AuthenticationUser, IdentityRole>()
-    .AddEntityFrameworkStores<AuthenticationDbContent>()
+    .AddEntityFrameworkStores<AuthenticationDbContext>()
     .AddDefaultTokenProviders();
 
 var ValidAudience = builder.Configuration["JWT:ValidAudience"];
@@ -90,9 +92,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-#if DEBUG
 app.UseSentryTracing();
-#endif
+
 
 var json = "application/json";
 
@@ -153,6 +154,7 @@ app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string
 .WithDisplayName("Deletes jsondata by its Id");
 #endregion
 
+app.MapGet("/error", () => true);
 
 using (var scope = app.Services.CreateAsyncScope())
 {
