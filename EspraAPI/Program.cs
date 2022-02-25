@@ -66,6 +66,7 @@ builder.Services.AddSwaggerGen();
 // Custom Services
 builder.Services.AddTransient<AuthenticationService>();
 builder.Services.AddTransient<JsonService>();
+builder.Services.AddTransient<FileService>();
 
     // 
 var url = builder.Configuration["MONGO:DEV_URL"];
@@ -89,6 +90,7 @@ app.UseAuthorization();
 app.UseSentryTracing();
 
 var json = "application/json";
+var formFile = "multipart/form-data";
 
 #region Route mappings
 app.MapPost("api/login", async (AuthenticationService authentication, CancellationToken token, [FromBody] LoginModel model) =>
@@ -116,7 +118,7 @@ app.MapGet("api/get/json/groupId/{group}", [Authorize(Roles = "Admin")] async (s
     return await jsonService.GetAsync(group, token);
 }).Accepts<string>(json)
 .Produces<IList<JsonData>>(StatusCodes.Status200OK)
-.WithDisplayName("Gets all data grouped by groupId");
+.WithDisplayName("Get all data grouped by groupId");
 
 app.MapGet("api/get/json/id/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
 {
@@ -126,7 +128,7 @@ app.MapGet("api/get/json/id/{id}", [Authorize(Roles = "Admin")] async (string id
 }).Accepts<string>(json)
 .Produces<JsonData>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
-.WithDisplayName("Gets a jsondata by its documentId");
+.WithDisplayName("Get a jsondata by its documentId");
 
 
 app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token) =>
@@ -135,7 +137,7 @@ app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string i
 }).Accepts<dynamic>(json)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
-.WithDisplayName("Updates an existing jsondata by its Id");
+.WithDisplayName("Update an existing jsondata by its Id");
 
 
 app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
@@ -144,7 +146,40 @@ app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string
 }).Accepts<dynamic>(json)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
-.WithDisplayName("Deletes jsondata by its Id");
+.WithDisplayName("Delete jsondata by its Id");
+
+app.MapPost("api/upload/file/{group}", [Authorize(Roles = "Admin")] async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
+{
+    if (!request.HasFormContentType)
+        return Results.BadRequest();
+
+    var form = await request.ReadFormAsync();
+
+    var file = form.Files.First(i => i != null && i.Length > 0);
+
+    if (file is null)
+        return Results.BadRequest("Empty request");
+
+    var fileExtension = Path.GetExtension(file.FileName);
+    
+    if(!Util.FILES_EXTENSIONS.Contains(fileExtension))
+        return Results.BadRequest("Unsupported file");
+
+    using var stream = new MemoryStream();
+
+    file.CopyTo(stream);
+
+    return await fileService.AddAsync(group, fileExtension, stream.ToArray(), token) ? Results.Ok() : Results.BadRequest();
+}).Accepts<IFormFile>(formFile)
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("Upload a file");
+
+// Only the first image
+app.MapGet("api/image/{group}", async (string group, FileService fileService, CancellationToken token) => 
+{
+    return Results.File(await fileService.GetOne(group, token),"image/jpeg");
+});
 #endregion
 
 
