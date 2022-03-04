@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Sentry;
 using MongoDB.Driver;
 using EspraAPI;
+using static EspraAPI.Configuration.ContentMiddleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,8 @@ var connectionString = builder.Configuration["IDENTITY:LIVE"];
 
 // Sentry
 builder.WebHost.UseSentry(builder.Configuration["SENTRY:DNS"]);
+
+
 
 // Add services to the container.
 builder.Services.AddDbContext<AuthenticationDbContent>(options => options.UseSqlServer(connectionString));
@@ -59,20 +62,19 @@ builder.Services.AddAuthorization();
 
 Util.Init(ValidIssuer, ValidAudience, Secret);
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 // Custom Services
 builder.Services.AddTransient<AuthenticationService>();
 builder.Services.AddTransient<JsonService>();
 builder.Services.AddTransient<FileService>();
 
-    // 
 var url = builder.Configuration["MONGO:DEV_URL"];
 IMongoClient mongoClient = new MongoClient(url);
 
 builder.Services.AddSingleton(mongoClient);
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -88,6 +90,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSentryTracing();
+app.Use(UploadFilter);
 
 var json = "application/json";
 var formFile = "multipart/form-data";
@@ -148,7 +151,7 @@ app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string
 .Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Delete jsondata by its Id");
 
-app.MapPost("api/upload/file/{group}", [Authorize(Roles = "Admin")] async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
+app.MapPost("api/upload/file/{group}", [Authorize(Roles = "Admin")]  async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
 {
     if (!request.HasFormContentType)
         return Results.BadRequest();
