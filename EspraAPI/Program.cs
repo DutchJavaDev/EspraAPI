@@ -13,7 +13,7 @@ var connectionString = builder.Configuration["IDENTITY:DEV"];
 // Add services to the container.
 
 // Custom Services
-builder.Services.AddTransient<Esp32StorageService>(i => new Esp32StorageService("Server=localhost;Database=iotproject;Uid=root;Pwd=;"));
+builder.Services.AddTransient<Esp32StorageService>(i => new Esp32StorageService("Server=localhost;Uid=dbi463253;Database=esp32snapshotdb;Pwd=;"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
