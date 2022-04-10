@@ -71,6 +71,17 @@ app.MapGet("api/get", (Esp32StorageService service, CancellationToken token) =>
     return Results.Ok(snapShots);
 });
 
+app.MapGet("api/get/{lastId}", (Esp32StorageService service, CancellationToken token, int lastId) => {
+
+    var snapShot = service.GetNext(lastId);
+
+    if(snapShot == null)
+        return Results.Ok();
+    else
+        return Results.Ok(snapShot);
+
+});
+
 app.MapPost("api/post", async (Esp32StorageService service, CancellationToken token, [FromBody] Esp32Model model) =>
 {
     if (!model.IsValid)

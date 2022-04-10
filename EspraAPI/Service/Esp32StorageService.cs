@@ -26,6 +26,14 @@ namespace EspraAPI.Service
             return session.Query<Esp32Model>().ToList();
         }
 
+        public Esp32Model GetNext(int lastId)
+        {
+            using NHibernate.ISession session = sessionFactory.OpenSession();
+            using ITransaction transaction = session.BeginTransaction();
+            var image = session.Query<Esp32Model>().Where(i => i.Id > lastId).FirstOrDefault();
+            return image;
+        }
+
         public async Task<bool> Add(Esp32Model model, CancellationToken token)
         {
             model.Base64SnapShot = $"data:image/jpeg;base64,{model.Base64SnapShot}";
