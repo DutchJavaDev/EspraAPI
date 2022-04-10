@@ -19,7 +19,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 // Custom Services
-builder.Services.AddTransient<Esp32StorageService>(i => new Esp32StorageService("Server=localhost;Uid=root;Database=esp32snapshotdb;Pwd=;"));
+builder.Services.AddTransient<Esp32StorageService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

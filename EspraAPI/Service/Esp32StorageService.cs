@@ -10,10 +10,10 @@ namespace EspraAPI.Service
     {
         private ISessionFactory sessionFactory;
 
-        public Esp32StorageService(string connectionString)
+        public Esp32StorageService()
         {
             sessionFactory = Fluently.Configure()
-                .Database(MySQLConfiguration.Standard.ConnectionString(connectionString))
+                .Database(MySQLConfiguration.Standard.ConnectionString("Server=localhost;Uid=root;Database=esp32snapshotdb;Pwd=;"))
                 .Mappings(i => i.FluentMappings.AddFromAssemblyOf<Esp32ModelMapping>())
                 .ExposeConfiguration(cfg => new SchemaUpdate(cfg).Execute(true, true))
                 .BuildSessionFactory();
