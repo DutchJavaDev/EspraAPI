@@ -10,6 +10,7 @@ namespace EspraAPI.Models
             Id(i => i.Id);
             Map(i => i.TimeStamp);
             Map(i => i.Base64SnapShot).CustomSqlType("CLOB");
+            Map(i => i.IsValid).Default(true.ToString());
         }
     }
 }
