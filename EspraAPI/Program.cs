@@ -2,6 +2,8 @@ using EspraAPI.Models;
 using EspraAPI.Service;
 using Microsoft.AspNetCore.Mvc;
 using EspraAPI.Configuration;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,10 @@ var connectionString = builder.Configuration["IDENTITY:DEV"];
 //builder.WebHost.UseSentry(builder.Configuration["SENTRY:DNS"]);
 
 // Add services to the container.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.KnownProxies.Add(IPAddress.Parse("10.0.0.100"));
+});
 
 // Custom Services
 builder.Services.AddTransient<Esp32StorageService>(i => new Esp32StorageService("Server=localhost;Uid=dbi463253;Database=esp32snapshotdb;Pwd=;"));
@@ -20,6 +26,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
