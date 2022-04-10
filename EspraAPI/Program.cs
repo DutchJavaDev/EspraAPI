@@ -7,6 +7,9 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options => options.Listen(System.Net.IPAddress.Parse("174.138.11.2"), 5000));
+
+
 var connectionString = builder.Configuration["IDENTITY:DEV"];
 
 // Sentry
@@ -26,6 +29,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+//app.Urls.Add("");
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
