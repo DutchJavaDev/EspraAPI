@@ -28,6 +28,8 @@ namespace EspraAPI.Service
 
         public async Task<bool> Add(Esp32Model model, CancellationToken token)
         {
+            model.Base64SnapShot = $"data:image/jpeg;base64,{model.Base64SnapShot}";
+
             using NHibernate.ISession session = sessionFactory.OpenSession();
             using ITransaction transaction = session.BeginTransaction();
             await session.SaveOrUpdateAsync(model, cancellationToken: token);
