@@ -15,7 +15,7 @@ namespace EspraAPI.Service
             sessionFactory = Fluently.Configure()
                 .Database(MySQLConfiguration.Standard.ConnectionString("Server=localhost;Uid=username;Database=esp32snapshotdb;Pwd=password;"))
                 .Mappings(i => i.FluentMappings.AddFromAssemblyOf<Esp32ModelMapping>())
-                .ExposeConfiguration(cfg => new SchemaUpdate(cfg).Execute(true, true))
+                .ExposeConfiguration(cfg => new SchemaExport(cfg).Execute(true, true, false))
                 .BuildSessionFactory();
         }
 
