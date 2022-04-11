@@ -22,6 +22,12 @@
                 cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
                 credentials: 'same-origin', // include, *same-origin, omit
             }).then(response => response.json())
-            .then(data => console.log(data));
+            .then(data => {
+                data.forEach(snapshot => {
+                    console.log(snapshot.id)
+                    console.log(snapshot.base64SnapShot)
+                    console.log(snapshot.timeStamp)
+                })
+            });
     }
 </script>

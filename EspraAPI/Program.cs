@@ -51,15 +51,14 @@ app.UseHttpsRedirection();
 
 //var json = "application/json";
 
-var mainDir = Directory.GetCurrentDirectory();
-
-var pageDir = $"{mainDir}/Page/index.html";
-
-var page = File.ReadAllText(pageDir);
-
 #region Route mappings
 app.MapGet("/",  () => {
-    // custom page for displaying images
+    var mainDir = Directory.GetCurrentDirectory();
+
+    var pageDir = $"{mainDir}/Page/index.html";
+
+    var page = File.ReadAllText(pageDir);
+
     return Results.Extensions.HtmlResponse(page);
 });
 
