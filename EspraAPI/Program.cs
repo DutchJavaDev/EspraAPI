@@ -32,6 +32,8 @@ var app = builder.Build();
 
 //app.Urls.Add("");
 
+app.UseCors();
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
