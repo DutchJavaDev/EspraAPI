@@ -30,13 +30,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-//app.Urls.Add("");
-
-app.UseCors(i => {
-    i.AllowAnyHeader();
-    i.AllowAnyMethod();
-    i.AllowAnyOrigin();
-});
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
