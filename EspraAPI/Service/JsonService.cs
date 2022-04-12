@@ -10,23 +10,28 @@ namespace EspraAPI.Service
         private readonly string CollectionName;
         private IMongoCollection<JsonData>? JsonCollection;
         private IMongoDatabase Database { get; set; }
+        public GroupService GroupService { get; private set; }
 
         [ActivatorUtilitiesConstructor]
-        public JsonService(IMongoClient mongoClient, IConfiguration configuration)
+        public JsonService(IMongoClient mongoClient, IConfiguration configuration, GroupService groupService)
         {
             Database = mongoClient.GetDatabase(configuration["MONGO:DATBASE"]);
             CollectionName = configuration["MONGO:JSON_COLLECTION"];
+            GroupService = groupService;
         }
 
-        public JsonService(IMongoDatabase mongoDatabase, string collection)
+        public JsonService(IMongoDatabase mongoDatabase, string collection, GroupService groupService)
         {
             Database = mongoDatabase;
             CollectionName = collection;
+            GroupService = groupService;
         }
 
-        public async Task<JsonData> GetByIdAsync(string id)
+        public async Task<JsonData> GetByIdAsync(string id, CancellationToken token)
         {
-            return await JsonCollection.Find(i => i.Id.Equals(id)).FirstAsync();
+            token.ThrowIfCancellationRequested();
+
+            return await (await JsonCollection.FindAsync(i => i.Id.Equals(id), cancellationToken: token)).FirstAsync(token);
         }
 
         public async Task<bool> AddAsync(string group, dynamic content, CancellationToken token)
@@ -38,19 +43,21 @@ namespace EspraAPI.Service
 
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
-            await JsonCollection.InsertOneAsync(new JsonData
+            var jsondata = new JsonData
             {
                 GroupId = group,
                 Data = content,
                 DateAdded = DateTime.Now.ToString(Util.DATE_FORMAT),
                 LastModified = DateTime.Now.ToString(Util.DATE_FORMAT)
 
-            },cancellationToken: token);
+            };
 
-            return true;
+            await JsonCollection.InsertOneAsync(jsondata,cancellationToken: token);
+
+            return await GroupService.AddJsonIdAsync(group, jsondata.Id, token);
         }
 
-        public async Task<IList<JsonData>> GetAsync(string group, CancellationToken token)
+        public async Task<IList<JsonData>> GetCollectionAsync(string group, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
@@ -65,8 +72,6 @@ namespace EspraAPI.Service
                 data = JsonSerializer.Serialize(data);
 
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
-
-            var old = (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).First(cancellationToken: token);
 
             var updateFilter = Builders<JsonData>.Filter.Eq(nameof(JsonData.Id), id);
 
@@ -87,9 +92,14 @@ namespace EspraAPI.Service
         {
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
+            var jsonData = (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).First(token);
+
+            if (jsonData is null)
+                return false;
+
             var deleteResult = await JsonCollection.DeleteOneAsync(i => i.Id == id, token);
 
-            return deleteResult.IsAcknowledged;
+            return deleteResult.IsAcknowledged && await GroupService.RemoveJsonIdAsync(jsonData.GroupId, jsonData.Id, token);
         }
     }
 
