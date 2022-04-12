@@ -64,6 +64,7 @@ Util.Init(ValidIssuer, ValidAudience, Secret);
 
 // Custom Services
 builder.Services.AddTransient<AuthenticationService>();
+builder.Services.AddTransient<GroupService>();
 builder.Services.AddTransient<JsonService>();
 builder.Services.AddTransient<FileService>();
 
@@ -118,14 +119,14 @@ app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string 
 
 app.MapGet("api/get/json/groupId/{group}", [Authorize(Roles = "Admin")] async (string group, CancellationToken token, JsonService jsonService) =>
 {
-    return await jsonService.GetAsync(group, token);
+    return await jsonService.GetCollectionAsync(group, token);
 }).Accepts<string>(json)
 .Produces<IList<JsonData>>(StatusCodes.Status200OK)
 .WithDisplayName("Get all data grouped by groupId");
 
 app.MapGet("api/get/json/id/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
 {
-    var result = await jsonService.GetByIdAsync(id);
+    var result = await jsonService.GetByIdAsync(id, token);
 
     return ! (result == null) ? Results.Ok(result) : Results.BadRequest();
 }).Accepts<string>(json)
@@ -151,37 +152,72 @@ app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string
 .Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Delete jsondata by its Id");
 
-app.MapPost("api/upload/file/{group}", [Authorize(Roles = "Admin")]  async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
+app.MapPost("api/post/document/{group}", [Authorize(Roles = "Admin")]  async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
 {
     if (!request.HasFormContentType)
         return Results.BadRequest();
 
     var form = await request.ReadFormAsync();
 
-    var file = form.Files.First(i => i != null && i.Length > 0);
+    var document = form.Files.First(i => i != null && i.Length > 0);
 
-    if (file is null)
+    if (document is null)
         return Results.BadRequest("Empty request");
 
-    var fileExtension = Path.GetExtension(file.FileName);
+    var documentExtension = Path.GetExtension(document.FileName);
     
-    if(!Util.FILES_EXTENSIONS.Contains(fileExtension))
+    if(!Util.DOCUMENT_EXTENSIONS.Contains(documentExtension))
         return Results.BadRequest("Unsupported file");
 
     using var stream = new MemoryStream();
 
-    file.CopyTo(stream);
+    document.CopyTo(stream);
 
-    return await fileService.AddAsync(group, fileExtension, stream.ToArray(), token) ? Results.Ok() : Results.BadRequest();
+    return await fileService.AddAsync(group, documentExtension, stream.ToArray(), token) ? Results.Ok() : Results.BadRequest();
 }).Accepts<IFormFile>(formFile)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
-.WithDisplayName("Upload a file");
+.WithDisplayName("Upload a document");
 
-// Only the first image
-app.MapGet("api/image/{group}", async (string group, FileService fileService, CancellationToken token) => 
+app.MapPost("api/post/image/{group}", [Authorize(Roles = "Admin")] async (string group, HttpRequest request, CancellationToken token, FileService fileService) =>
 {
-    return Results.File(await fileService.GetOne(group, token),"image/jpeg");
+    if (!request.HasFormContentType)
+        return Results.BadRequest();
+
+    var form = await request.ReadFormAsync();
+
+    var image = form.Files.First(i => i != null && i.Length > 0);
+
+    if (image is null)
+        return Results.BadRequest("Empty request");
+
+    var imageExtension = Path.GetExtension(image.FileName);
+
+    if (!Util.IMAGE_EXTENSIONS.Contains(imageExtension))
+        return Results.BadRequest("Unsupported file");
+
+    using var stream = new MemoryStream();
+
+    image.CopyTo(stream);
+
+    return await fileService.AddAsync(group, imageExtension, stream.ToArray(), token) ? Results.Ok() : Results.BadRequest();
+}).Accepts<IFormFile>(formFile)
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithDisplayName("Upload a image");
+
+app.MapGet("api/get/document/{id}", async (string id, FileService fileService, CancellationToken token) => 
+{
+    var documentData = await fileService.GetDocumentById(id, token);
+
+    return Results.File(documentData.Item1,documentData.Item2);
+});
+
+app.MapGet("api/get/image/{id}", async (string id, FileService fileService, CancellationToken token) =>
+{
+    var documentData = await fileService.GetImageById(id, token);
+
+    return Results.File(documentData.Item1, documentData.Item2);
 });
 #endregion
 
