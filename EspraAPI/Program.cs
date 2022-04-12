@@ -7,9 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
-#if DEBUG
-using Sentry;
-#endif
 using MongoDB.Driver;
 using EspraAPI;
 
@@ -205,10 +202,7 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
             {
                 builder.AppendLine($"code={error.Code} | {error.Description}");
             }
-
-#if DEBUG
             SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
-#endif
         }
         else
         {
@@ -226,9 +220,7 @@ async static Task CreateDefaultAccount(UserManager<AuthenticationUser> userManag
                     builder.AppendLine($"code={error.Code} | {error.Description}");
                 }
 
-#if DEBUG
                 SentrySdk.CaptureMessage(builder.ToString(), SentryLevel.Error);
-#endif
             }
         }
     }
