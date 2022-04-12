@@ -12,21 +12,24 @@ namespace EspraUnitTest
 {
     public class JsonServiceUnitTest
     {
-        private static JsonService JsonService { get; set; }
-        private static IMongoClient client;
-        private static string Database = "espra_test_db";
-        private static string JsonCollection = "json_test_collection";
-        private static Random Random = new Random();
-        private static CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
+        private static JsonService? JsonService { get; set; }
+        private static GroupService? GroupService { get; set; }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        private static IMongoClient Client;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        private static readonly string Database = "espra_test_db";
+        private static readonly string JsonCollection = "json_test_collection";
+        private static readonly Random Random = new();
+        private static CancellationTokenSource CancellationTokenSource = new();
 
         public JsonServiceUnitTest()
         {
-            client = new MongoClient("mongodb://localhost:27017");
+            Client = new MongoClient("mongodb://localhost:27017");
         }
 
         ~JsonServiceUnitTest() 
         {
-            client.DropDatabase(Database);
+            Client.DropDatabase(Database);
         }
 
         [Fact(DisplayName = "Add jsondata en verfify that it has been created")] 
@@ -40,46 +43,47 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collection = await json.GetAsync("test", CancellationTokenSource.Token);
+            var collection = await json.GetCollectionAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, collection.Count);
+
+            var group = await json.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
+
+            Assert.Equal(collection[0].Id, group.JsonIds[0]);
         }
 
         [Fact(DisplayName = "Get a jsondata object and verify the data")] 
         public async void Get_JSON_Data()
         {
-            var json = await CreateService();
+            var service = await CreateService();
 
-            var addResult = await json.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
+            var groupInfo = await service.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
 
-            Assert.Equal(1, getResult.Count);
-             
-            var obj = getResult[0];
+            var jsonData = await service.GetByIdAsync(groupInfo.JsonIds[0], CancellationTokenSource.Token);
 
-            dynamic? data = JsonSerializer.Deserialize<ExpandoObject?>(obj.Data);
+            dynamic? data = JsonSerializer.Deserialize<ExpandoObject?>(jsonData.Data);
 
             Assert.Equal("TestObject", JsonSerializer.Deserialize<string>(data?.Name));
         }
 
-
         [Fact(DisplayName = "Update a exisitng jsondata by changing its Data field and verify that is has been updated")] 
         public async void Update_JSON_Data()
         {
-            var json = await CreateService();
+            var service = await CreateService();
 
-            var addResult = await json.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -95,18 +99,17 @@ namespace EspraUnitTest
 
             var update = "My internal gu-data have been flipped upside down 8555";
 
-            var updateResult = await json.UpdateAsync(id, update, CancellationTokenSource.Token);
+            var updateResult = await service.UpdateAsync(id, update, CancellationTokenSource.Token);
 
             Assert.True(updateResult);
 
-
-            var result = await json.GetByIdAsync(id);
+            var result = await service.GetByIdAsync(id, CancellationTokenSource.Token);
 
             Assert.Equal(update, result.Data);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collectionResult = await json.GetAsync("test", CancellationTokenSource.Token);
+            var collectionResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
 
             Assert.True(collectionResult.Count > 0);
 
@@ -118,15 +121,15 @@ namespace EspraUnitTest
         [Fact(DisplayName = "Delete jsondata by its id")]
         public async void Delete_JSON_Data()
         {
-            var json = await CreateService();
+            var service = await CreateService();
 
-            var addResult = await json.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await json.GetAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -136,15 +139,19 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var deleteResult = await json.DeleteAsync(id, CancellationTokenSource.Token);
+            var deleteResult = await service.DeleteAsync(id, CancellationTokenSource.Token);
 
             Assert.True(deleteResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            getResult = await json.GetAsync("test", CancellationTokenSource.Token);
+            getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
 
             Assert.Empty(getResult);
+
+            var group = await service.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
+
+            Assert.Empty(group.JsonIds);
         }
 
         private async static Task<JsonService> CreateService()
@@ -152,22 +159,24 @@ namespace EspraUnitTest
             if (CancellationTokenSource != null)
                 CancellationTokenSource = new CancellationTokenSource();
 
-            if (client.ListDatabaseNames().ToList().Count > 0)
-                client.DropDatabase(Database);
+            if (Client.ListDatabaseNames().ToList().Count > 0)
+                Client.DropDatabase(Database);
 
-            var db = client.GetDatabase(Database);
+            var db = Client.GetDatabase(Database);
 
             if(db != null)
                 await db.DropCollectionAsync(JsonCollection);
 
 
-            client.DropDatabase(Database);
+            Client.DropDatabase(Database);
+
+            if (GroupService == null)
+                GroupService = new GroupService(db ?? Client.GetDatabase(Database));
 
             if (JsonService == null)
-                JsonService = new JsonService(db ?? client.GetDatabase(Database), JsonCollection);
+                JsonService = new JsonService(db ?? Client.GetDatabase(Database), JsonCollection, GroupService);
 
             return JsonService;
-
         }
 
         private static string CreateObject()
@@ -180,7 +189,6 @@ namespace EspraUnitTest
             _object.Obj = new object();
 
             return JsonSerializer.Serialize(_object);
-
         }
     }
 }
