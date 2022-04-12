@@ -9,18 +9,20 @@ namespace EspraAPI.Service
         private readonly string CollectionName;
         private IMongoCollection<FileData>? FileCollection;
         private IMongoDatabase Database { get; set; }
-
+        public  GroupService GroupService { get; private set; }
         [ActivatorUtilitiesConstructor]
-        public FileService(IMongoClient mongoClient, IConfiguration configuration)
+        public FileService(IMongoClient mongoClient, IConfiguration configuration, GroupService groupService)
         {
             Database = mongoClient.GetDatabase(configuration["MONGO:DATBASE"]);
             CollectionName = configuration["MONGO:FILE_COLLECTION"];
+            GroupService = groupService;
         }
 
-        public FileService(IMongoDatabase mongoDatabase, string collection)
+        public FileService(IMongoDatabase mongoDatabase, string collection, GroupService groupService)
         {
             Database = mongoDatabase;
             CollectionName = collection;
+            GroupService = groupService;
         }
 
         public async Task<bool> AddAsync(string group, string extension, byte[] data, CancellationToken token)
@@ -29,15 +31,46 @@ namespace EspraAPI.Service
 
             FileCollection = Database.GetCollection<FileData>(CollectionName);
 
-            await FileCollection.InsertOneAsync(new FileData {
+            var fileData = new FileData
+            {
                 GroupId = group,
                 Extension = extension,
                 Data = data,
                 DateAdded = DateTime.Now.ToString(Util.DATE_FORMAT),
                 LastModified = DateTime.Now.ToString(Util.DATE_FORMAT)
-            }, cancellationToken: token);
+            };
+
+            await FileCollection.InsertOneAsync(fileData, cancellationToken: token);
 
             return true;
+        }
+
+        public async Task<(byte[], string)> GetDocumentById(string id, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            FileCollection = Database.GetCollection<FileData>(CollectionName);
+
+            var document = await (await FileCollection.FindAsync(i => i.Id == id, cancellationToken: token)).FirstOrDefaultAsync(token);
+
+            if (document != null)
+                return (document.Data, Util.GetDocumentMIMEType(document.Extension));
+
+            return (new byte[] { 0 }, "text/plain");
+        }
+
+        public async Task<(byte[], string)> GetImageById(string id, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            FileCollection = Database.GetCollection<FileData>(CollectionName);
+
+            var document = await (await FileCollection.FindAsync(i => i.Id == id, cancellationToken: token)).FirstOrDefaultAsync(token);
+
+            if (document != null)
+                return (document.Data, Util.GetImageMIMEType(document.Extension));
+
+            return (new byte[] { 0 }, "text/plain");
         }
 
         public async Task<byte[]> GetOne(string group, CancellationToken token)
@@ -59,10 +92,21 @@ namespace EspraAPI.Service
 
         public string Extension { get; set; } = string.Empty;
 
+        public string MIMEType { get; set; } = string.Empty;
+
         public byte[] Data { get; set; } = new byte[] { 0 };
 
         public string DateAdded { get; set; } = string.Empty;
 
         public string LastModified { get; set; } = string.Empty;
+
+        public FileType FileType { get; set; } = FileType.Unset;
+    }
+
+    public enum FileType 
+    {
+        Unset,
+        Document,
+        Image
     }
 }
