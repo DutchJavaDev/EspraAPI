@@ -9,12 +9,18 @@
 </head>
 
 <body>
-
+    <template id="snapShot">
+        <div class="snapShotDisplay">
+            <h2></h2>
+            <img src="">
+        </div>
+    </template>
 </body>
 
 </html>
 <script>
     var url = "http://174.138.11.2:5000/api/get";
+    var lastId;
     window.onload = function() {
         fetch(url, {
                 method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -24,10 +30,23 @@
             }).then(response => response.json())
             .then(data => {
                 data.forEach(snapshot => {
-                    console.log(snapshot.id)
-                    console.log(snapshot.base64SnapShot)
-                    console.log(snapshot.timeStamp)
+                    var id = snapshot.id;
+                    var base64 = snapshot.base64SnapShot;
+                    var stamp = snapshot.timeStamp;
+
+                    var temp = document.querySelector("#snapShot");
+
+                    var clone = temp.content.cloneNode(true);
+
+                    clone.querySelector("h2").innerHTML = stamp;
+                    clone.querySelector("img").src = base64;
+
+                    document.body.appendChild(clone);
+
+                    lastId = id;
                 })
+
+                setInterval();
             });
     }
 </script>

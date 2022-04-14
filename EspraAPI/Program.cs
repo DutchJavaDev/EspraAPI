@@ -77,7 +77,6 @@ app.MapGet("api/get/{lastId}", (Esp32StorageService service, CancellationToken t
         return Results.Ok();
     else
         return Results.Ok(snapShot);
-
 });
 
 app.MapPost("api/post", async (Esp32StorageService service, CancellationToken token, [FromBody] Esp32Model model) =>
@@ -91,7 +90,6 @@ app.MapPost("api/post", async (Esp32StorageService service, CancellationToken to
 
 
 app.Run();
-
 
 #region Startup configuration
 
