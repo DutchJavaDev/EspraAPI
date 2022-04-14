@@ -215,9 +215,9 @@ app.MapGet("api/get/document/{id}", async (string id, FileService fileService, C
 
 app.MapGet("api/get/image/{id}", async (string id, FileService fileService, CancellationToken token) =>
 {
-    var documentData = await fileService.GetImageById(id, token);
+    var imageData = await fileService.GetImageById(id, token);
 
-    return Results.File(documentData.Item1, documentData.Item2);
+    return Results.File(imageData.Item1, imageData.Item2);
 });
 #endregion
 
