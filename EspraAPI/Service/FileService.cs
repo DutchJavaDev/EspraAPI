@@ -92,21 +92,10 @@ namespace EspraAPI.Service
 
         public string Extension { get; set; } = string.Empty;
 
-        public string MIMEType { get; set; } = string.Empty;
-
         public byte[] Data { get; set; } = new byte[] { 0 };
 
         public string DateAdded { get; set; } = string.Empty;
 
         public string LastModified { get; set; } = string.Empty;
-
-        public FileType FileType { get; set; } = FileType.Unset;
-    }
-
-    public enum FileType 
-    {
-        Unset,
-        Document,
-        Image
     }
 }
