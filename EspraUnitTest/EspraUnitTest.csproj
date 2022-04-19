@@ -26,19 +26,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Files\Image.jpg">
+    <None Update="Files\Images\Image.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Files\Image.png">
+    <None Update="Files\Images\Image.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Files\Pdf.pdf">
+    <None Update="Files\Documents\Pdf.pdf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Files\TextFile.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\Word.docx">
+    <None Update="Files\Documents\TextFile.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
