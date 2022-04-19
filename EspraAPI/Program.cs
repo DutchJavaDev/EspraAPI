@@ -11,6 +11,7 @@ using Sentry;
 using MongoDB.Driver;
 using EspraAPI;
 using static EspraAPI.Configuration.ContentMiddleware;
+using EspraAPI.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,13 +98,8 @@ var json = "application/json";
 var formFile = "multipart/form-data";
 
 #region Route mappings
-app.MapPost("api/login", async (AuthenticationService authentication, CancellationToken token, [FromBody] LoginModel model) =>
-{
-    var loginResult = await authentication.Login(model);
-
-    return loginResult.Success ? Results.Ok(loginResult) : Results.BadRequest(loginResult);
-
-}).Accepts<LoginModel>(json)
+app.MapPost("api/login", AuthHandler.Login)
+.Accepts<LoginModel>(json)
 .Produces<LoginResponse>(StatusCodes.Status200OK)
 .Produces<LoginResponse>(StatusCodes.Status400BadRequest)
 .WithDisplayName("Login route");
@@ -119,7 +115,7 @@ app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string 
 
 app.MapGet("api/get/json/groupId/{group}", [Authorize(Roles = "Admin")] async (string group, CancellationToken token, JsonService jsonService) =>
 {
-    return await jsonService.GetCollectionAsync(group, token);
+    return await jsonService.GetCollectionByGroupAsync(group, token);
 }).Accepts<string>(json)
 .Produces<IList<JsonData>>(StatusCodes.Status200OK)
 .WithDisplayName("Get all data grouped by groupId");
@@ -137,7 +133,7 @@ app.MapGet("api/get/json/id/{id}", [Authorize(Roles = "Admin")] async (string id
 
 app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token) =>
 {
-    return (await jsonService.UpdateAsync(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
+    return (await jsonService.UpdateByIdAsync(id, ndata, token)) ? Results.Ok() : Results.BadRequest();
 }).Accepts<dynamic>(json)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
@@ -146,7 +142,7 @@ app.MapPost("api/update/json/{id}", [Authorize(Roles = "Admin")] async (string i
 
 app.MapDelete("api/delete/json/{id}", [Authorize(Roles = "Admin")] async (string id, CancellationToken token, JsonService jsonService) =>
 {
-    return (await jsonService.DeleteAsync(id, token)) ? Results.Ok() : Results.BadRequest();
+    return (await jsonService.DeleteByIdAsync(id, token)) ? Results.Ok() : Results.BadRequest();
 }).Accepts<dynamic>(json)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
@@ -208,14 +204,14 @@ app.MapPost("api/post/image/{group}", [Authorize(Roles = "Admin")] async (string
 
 app.MapGet("api/get/document/{id}", async (string id, FileService fileService, CancellationToken token) => 
 {
-    var documentData = await fileService.GetDocumentById(id, token);
+    var documentData = await fileService.GetDocumentByIdAsync(id, token);
 
     return Results.File(documentData.Item1,documentData.Item2);
 });
 
 app.MapGet("api/get/image/{id}", async (string id, FileService fileService, CancellationToken token) =>
 {
-    var imageData = await fileService.GetImageById(id, token);
+    var imageData = await fileService.GetImageByIdAsync(id, token);
 
     return Results.File(imageData.Item1, imageData.Item2);
 });
