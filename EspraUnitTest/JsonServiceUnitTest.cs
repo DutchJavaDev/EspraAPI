@@ -33,7 +33,7 @@ namespace EspraUnitTest
         }
 
         [Fact(DisplayName = "Add jsondata en verfify that it has been created")] 
-        public async void Add_JSON_Data()
+        public async Task Add_JSON_Data()
         {
             var json = await CreateService();
 
@@ -43,7 +43,7 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collection = await json.GetCollectionAsync("test", CancellationTokenSource.Token);
+            var collection = await json.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, collection.Count);
 
@@ -53,7 +53,7 @@ namespace EspraUnitTest
         }
 
         [Fact(DisplayName = "Get a jsondata object and verify the data")] 
-        public async void Get_JSON_Data()
+        public async Task Get_JSON_Data()
         {
             var service = await CreateService();
 
@@ -73,7 +73,7 @@ namespace EspraUnitTest
         }
 
         [Fact(DisplayName = "Update a exisitng jsondata by changing its Data field and verify that is has been updated")] 
-        public async void Update_JSON_Data()
+        public async Task Update_JSON_Data()
         {
             var service = await CreateService();
 
@@ -83,7 +83,7 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -99,7 +99,7 @@ namespace EspraUnitTest
 
             var update = "My internal gu-data have been flipped upside down 8555";
 
-            var updateResult = await service.UpdateAsync(id, update, CancellationTokenSource.Token);
+            var updateResult = await service.UpdateByIdAsync(id, update, CancellationTokenSource.Token);
 
             Assert.True(updateResult);
 
@@ -109,7 +109,7 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collectionResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
+            var collectionResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
 
             Assert.True(collectionResult.Count > 0);
 
@@ -119,7 +119,7 @@ namespace EspraUnitTest
         }
 
         [Fact(DisplayName = "Delete jsondata by its id")]
-        public async void Delete_JSON_Data()
+        public async Task Delete_JSON_Data()
         {
             var service = await CreateService();
 
@@ -129,7 +129,7 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -139,13 +139,13 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var deleteResult = await service.DeleteAsync(id, CancellationTokenSource.Token);
+            var deleteResult = await service.DeleteByIdAsync(id, CancellationTokenSource.Token);
 
             Assert.True(deleteResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            getResult = await service.GetCollectionAsync("test", CancellationTokenSource.Token);
+            getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
 
             Assert.Empty(getResult);
 
@@ -166,7 +166,6 @@ namespace EspraUnitTest
 
             if(db != null)
                 await db.DropCollectionAsync(JsonCollection);
-
 
             Client.DropDatabase(Database);
 
