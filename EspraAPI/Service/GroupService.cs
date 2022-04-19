@@ -26,7 +26,7 @@ namespace EspraAPI.Service
 
             GroupInfoCollection = Database.GetCollection<GroupInfo>(CollectionName);
 
-            return await (await GroupInfoCollection.FindAsync(i => i.GroupName == name, cancellationToken: token)).FirstAsync(cancellationToken: token);
+            return await (await GroupInfoCollection.FindAsync(i => i.GroupName == name, cancellationToken: token)).FirstOrDefaultAsync(cancellationToken: token);
         }
 
         public async Task<bool> AddJsonIdAsync(string groupName, string jsonId, CancellationToken token)
@@ -99,7 +99,7 @@ namespace EspraAPI.Service
             {
                 group = new GroupInfo { GroupName = groupName };
 
-                group.JsonIds.Add(fileId);
+                group.FileIds.Add(fileId);
 
                 await GroupInfoCollection.InsertOneAsync(group, cancellationToken: token);
 
