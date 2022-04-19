@@ -19,8 +19,6 @@ namespace EspraAPI
         public static string[] DOCUMENT_EXTENSIONS = {
             ".txt",
             ".pdf",
-            ".docx",
-            ".doc", // ?????
             ".html",
             ".css",
             ".js"
@@ -52,18 +50,12 @@ namespace EspraAPI
                 return "application/pdf";
 
             if (extension == DOCUMENT_EXTENSIONS[2])
-                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
-            if (extension == DOCUMENT_EXTENSIONS[3])
-                return "application/msword";
-
-            if (extension == DOCUMENT_EXTENSIONS[4])
                 return "text/html";
 
-            if (extension == DOCUMENT_EXTENSIONS[5])
+            if (extension == DOCUMENT_EXTENSIONS[3])
                 return "text/css";
 
-            if (extension == DOCUMENT_EXTENSIONS[6])
+            if (extension == DOCUMENT_EXTENSIONS[4])
                 return "text/javascript";
 
             return "application/octet-stream";
