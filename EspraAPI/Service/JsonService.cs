@@ -57,7 +57,7 @@ namespace EspraAPI.Service
             return await GroupService.AddJsonIdAsync(group, jsondata.Id, token);
         }
 
-        public async Task<IList<JsonData>> GetCollectionAsync(string group, CancellationToken token)
+        public async Task<IList<JsonData>> GetCollectionByGroupAsync(string group, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
@@ -66,7 +66,7 @@ namespace EspraAPI.Service
             return await (await JsonCollection.FindAsync(i => i.GroupId == group, cancellationToken: token)).ToListAsync(cancellationToken: token);
         }
 
-        public async Task<bool> UpdateAsync(string id, dynamic data, CancellationToken token)
+        public async Task<bool> UpdateByIdAsync(string id, dynamic data, CancellationToken token)
         {
             if (data is not string)
                 data = JsonSerializer.Serialize(data);
@@ -88,18 +88,23 @@ namespace EspraAPI.Service
         }
 
 
-        public async Task<bool> DeleteAsync(string id, CancellationToken token)
+        public async Task<bool> DeleteByIdAsync(string id, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
+
             JsonCollection = Database.GetCollection<JsonData>(CollectionName);
 
             var jsonData = (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).First(token);
 
             if (jsonData is null)
-                return false;
+                return true;
 
-            var deleteResult = await JsonCollection.DeleteOneAsync(i => i.Id == id, token);
+            if ((await JsonCollection.DeleteOneAsync(i => i.Id == id, token)).IsAcknowledged)
+            {
+                await GroupService.RemoveJsonIdAsync(jsonData.GroupId, jsonData.Id, token);
+            }
 
-            return deleteResult.IsAcknowledged && await GroupService.RemoveJsonIdAsync(jsonData.GroupId, jsonData.Id, token);
+            return true;
         }
     }
 
