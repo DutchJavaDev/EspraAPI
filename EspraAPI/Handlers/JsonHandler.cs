@@ -21,13 +21,14 @@ namespace EspraAPI.Handlers
             return added ? Results.Ok() : Results.BadRequest();
         }
 
-
         [Authorize(Roles = "Admin")]
         public static async Task<object> GetJsonById(string group, JsonService jsonService, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
-            return Results.Ok(await jsonService.GetCollectionByGroupAsync(group, token));
+            var collection = await jsonService.GetCollectionByGroupAsync(group, token);
+
+            return collection == null ? Results.BadRequest() : Results.Ok(collection);
         }
 }
 }

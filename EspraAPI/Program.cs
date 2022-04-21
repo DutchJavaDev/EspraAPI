@@ -114,7 +114,8 @@ app.MapPost("api/post/json/{group}", JsonHandler.PostJson)
 .WithDisplayName("New jsondata entry");
 
 
-app.MapGet("api/get/json/groupId/{group}", JsonHandler.GetJsonById).Accepts<string>(json)
+app.MapGet("api/get/json/groupId/{group}", JsonHandler.GetJsonById)
+.Accepts<string>(json)
 .Produces<IList<JsonData>>(StatusCodes.Status200OK)
 .WithDisplayName("Get all data grouped by groupId");
 
