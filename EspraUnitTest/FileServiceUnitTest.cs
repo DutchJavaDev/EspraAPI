@@ -24,14 +24,14 @@ namespace EspraUnitTest
         public FileServiceUnitTest()
         {
             Client = new MongoClient("mongodb://localhost:27017");
+
+            if (Client.ListDatabaseNames().ToList().Contains(Database))
+            {
+                Client.DropDatabase(Database);
+            }
         }
 
-        ~FileServiceUnitTest()
-        {
-            Client.DropDatabase(Database);
-        }
-
-        [Fact]
+        [Fact(DisplayName = "Upload documents and verify the MIMETYPE & bytes lenght")]
         public async Task Upload_Document() 
         {
             CancellationTokenSource = new CancellationTokenSource();
@@ -65,7 +65,7 @@ namespace EspraUnitTest
 
         }
 
-        [Fact]
+        [Fact(DisplayName = "Upload images and verify the MIMETYPE & bytes lenght")]
         public async Task Upload_Image() 
         {
             CancellationTokenSource = new CancellationTokenSource();
@@ -99,7 +99,7 @@ namespace EspraUnitTest
 
         }
 
-        [Fact]
+        [Fact(DisplayName = "Upload a document and a image, delete them, verify that the are have been deleted")]
         public async Task Delete_Files()
         {
             CancellationTokenSource = new CancellationTokenSource();
