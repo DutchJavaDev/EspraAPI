@@ -25,11 +25,11 @@ namespace EspraUnitTest
         public JsonServiceUnitTest()
         {
             Client = new MongoClient("mongodb://localhost:27017");
-        }
 
-        ~JsonServiceUnitTest() 
-        {
-            Client.DropDatabase(Database);
+            if(Client.ListDatabaseNames().ToList().Contains(Database))
+            {
+                Client.DropDatabase(Database);
+            }
         }
 
         [Fact(DisplayName = "Add jsondata en verfify that it has been created")] 
@@ -37,17 +37,19 @@ namespace EspraUnitTest
         {
             var json = await CreateService();
 
-            var addResult = await json.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var collectionGroup = CreateRandomGroup();
+
+            var addResult = await json.AddAsync(collectionGroup, JsonSerializer.Serialize(CreateObject()), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collection = await json.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
+            var collection = await json.GetCollectionByGroupAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.Equal(1, collection.Count);
 
-            var group = await json.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
+            var group = await json.GroupService.GetGroupInfoAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.Equal(collection[0].Id, group.JsonIds[0]);
         }
@@ -57,19 +59,25 @@ namespace EspraUnitTest
         {
             var service = await CreateService();
 
-            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var collectionGroup = CreateRandomGroup();
+
+            var _object = CreateObject();
+
+            var addResult = await service.AddAsync(collectionGroup, JsonSerializer.Serialize(_object), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var groupInfo = await service.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
+            var groupInfo = await service.GroupService.GetGroupInfoAsync(collectionGroup, CancellationTokenSource.Token);
 
             var jsonData = await service.GetByIdAsync(groupInfo.JsonIds[0], CancellationTokenSource.Token);
 
             dynamic? data = JsonSerializer.Deserialize<ExpandoObject?>(jsonData.Data);
 
-            Assert.Equal("TestObject", JsonSerializer.Deserialize<string>(data?.Name));
+            Assert.NotNull(data);
+            
+            Assert.Equal(_object.Name, JsonSerializer.Deserialize<string>(data?.Name));
         }
 
         [Fact(DisplayName = "Update a exisitng jsondata by changing its Data field and verify that is has been updated")] 
@@ -77,13 +85,17 @@ namespace EspraUnitTest
         {
             var service = await CreateService();
 
-            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var collectionGroup = CreateRandomGroup();
+
+            dynamic _object = CreateObject();
+
+            var addResult = await service.AddAsync(collectionGroup, JsonSerializer.Serialize(_object), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionByGroupAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -91,7 +103,7 @@ namespace EspraUnitTest
 
             dynamic? data = JsonSerializer.Deserialize<ExpandoObject?>(obj.Data);
 
-            Assert.Equal("TestObject", JsonSerializer.Deserialize<string>(data?.Name));
+            Assert.Equal(_object.Name, JsonSerializer.Deserialize<string>(data?.Name));
 
             CancellationTokenSource = new CancellationTokenSource();
 
@@ -109,7 +121,7 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var collectionResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
+            var collectionResult = await service.GetCollectionByGroupAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.True(collectionResult.Count > 0);
 
@@ -123,13 +135,15 @@ namespace EspraUnitTest
         {
             var service = await CreateService();
 
-            var addResult = await service.AddAsync("test", CreateObject(), CancellationTokenSource.Token);
+            var collectionGroup = CreateRandomGroup();
+
+            var addResult = await service.AddAsync(collectionGroup, JsonSerializer.Serialize(CreateObject()), CancellationTokenSource.Token);
 
             Assert.True(addResult);
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            var getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
+            var getResult = await service.GetCollectionByGroupAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.Equal(1, getResult.Count);
 
@@ -145,13 +159,13 @@ namespace EspraUnitTest
 
             CancellationTokenSource = new CancellationTokenSource();
 
-            getResult = await service.GetCollectionByGroupAsync("test", CancellationTokenSource.Token);
+            getResult = await service.GetCollectionByGroupAsync(collectionGroup, CancellationTokenSource.Token);
 
             Assert.Empty(getResult);
 
-            var group = await service.GroupService.GetGroupInfoAsync("test", CancellationTokenSource.Token);
+            var group = await service.GroupService.GetGroupInfoAsync(collectionGroup, CancellationTokenSource.Token);
 
-            Assert.Empty(group.JsonIds);
+            Assert.Empty(group?.JsonIds);
         }
 
         private async static Task<JsonService> CreateService()
@@ -178,16 +192,18 @@ namespace EspraUnitTest
             return JsonService;
         }
 
-        private static string CreateObject()
+        private static dynamic CreateObject()
         {
             dynamic _object = new ExpandoObject();
 
             _object.Id = Random.Next();
-            _object.Name = "TestObject";
+            _object.Name = $"TestObject_{Random.Next(0,999)}";
             _object.Description = false;
             _object.Obj = new object();
 
-            return JsonSerializer.Serialize(_object);
+            return _object;
         }
+
+        private static string CreateRandomGroup() => $"group_{Random.Next(0, 9999)}";
     }
 }
