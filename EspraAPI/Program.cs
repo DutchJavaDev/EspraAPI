@@ -12,6 +12,9 @@ using MongoDB.Driver;
 using EspraAPI;
 using static EspraAPI.Configuration.ContentMiddleware;
 using EspraAPI.Handlers;
+using static EspraAPI.Handlers.JsonHandler;
+using static EspraAPI.Handlers.AuthHandler;
+using static EspraAPI.Handlers.FileHandler;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,19 +107,14 @@ app.MapPost("api/login", AuthHandler.Login)
 .Produces<LoginResponse>(StatusCodes.Status400BadRequest)
 .WithDisplayName("Login route");
 
-app.MapPost("api/post/json/{group}", [Authorize(Roles = "Admin")] async (string group, [FromBody] dynamic data, JsonService jsonService, CancellationToken token) =>
-{
-    return await jsonService.AddAsync(group, data, token) ? Results.Ok() : Results.BadRequest();
-}).Accepts<dynamic>(json)
+app.MapPost("api/post/json/{group}", JsonHandler.PostJson)
+.Accepts<string>(json)
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("New jsondata entry");
 
 
-app.MapGet("api/get/json/groupId/{group}", [Authorize(Roles = "Admin")] async (string group, CancellationToken token, JsonService jsonService) =>
-{
-    return await jsonService.GetCollectionByGroupAsync(group, token);
-}).Accepts<string>(json)
+app.MapGet("api/get/json/groupId/{group}", JsonHandler.GetJsonById).Accepts<string>(json)
 .Produces<IList<JsonData>>(StatusCodes.Status200OK)
 .WithDisplayName("Get all data grouped by groupId");
 
