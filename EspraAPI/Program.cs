@@ -100,6 +100,9 @@ app.MapPost("api/login", AuthHandler.Login)
 .Accepts<LoginModel>(json)
 .WithDisplayName("Login route");
 
+app.MapGet("api/get/group/{groupId}", GroupHandler.GetGroupInfo)
+.WithDisplayName("Get group info");
+
 app.MapPost("api/post/json/{group}", JsonHandler.PostJson)
 .Accepts<string>(json)
 .WithDisplayName("New jsondata entry");
