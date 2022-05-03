@@ -22,13 +22,40 @@ namespace EspraAPI.Handlers
         }
 
         [Authorize(Roles = "Admin")]
-        public static async Task<object> GetJsonById(string group, JsonService jsonService, CancellationToken token)
+        public static async Task<object> GetJsonByGroupId(string group, JsonService jsonService, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
             var collection = await jsonService.GetCollectionByGroupAsync(group, token);
 
-            return collection == null ? Results.BadRequest() : Results.Ok(collection);
+            return collection == null ? Results.NotFound() : Results.Ok(collection);
+        }
+
+        [Authorize(Roles = "Admin")]
+        public static async Task<object> GetJsonById(string id, JsonService jsonService, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var json = await jsonService.GetByIdAsync(id, token);
+
+            return json == null ? Results.NotFound(json) : Results.Ok(json);
+        }
+
+        [Authorize(Roles = "Admin")]
+        public static async Task<object> UpdateJsonById(string id, [FromBody] dynamic ndata, JsonService jsonService, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            return await jsonService.UpdateByIdAsync(id, ndata, token) ? Results.Ok() : Results.BadRequest();
+        }
+
+        [Authorize(Roles = "Admin")]
+        public static async Task<object> DeleteJsonById(string id, JsonService jsonService, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            return await jsonService.DeleteByIdAsync(id, token) ? Results.Ok() : Results.BadRequest();
         }
 }
+
 }
