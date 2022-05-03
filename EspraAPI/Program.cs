@@ -98,49 +98,34 @@ var formFile = "multipart/form-data";
 #region Route mappings
 app.MapPost("api/login", AuthHandler.Login)
 .Accepts<LoginModel>(json)
-.Produces<LoginResponse>(StatusCodes.Status200OK)
-.Produces<LoginResponse>(StatusCodes.Status400BadRequest)
 .WithDisplayName("Login route");
 
 app.MapPost("api/post/json/{group}", JsonHandler.PostJson)
 .Accepts<string>(json)
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("New jsondata entry");
 
 app.MapGet("api/get/json/groupId/{group}", JsonHandler.GetJsonByGroupId)
 .Accepts<string>(json)
-.Produces<IList<JsonData>>(StatusCodes.Status200OK)
 .WithDisplayName("Get all data grouped by groupId");
 
 app.MapGet("api/get/json/id/{id}", JsonHandler.GetJsonById).
  Accepts<string>(json)
-.Produces<JsonData>(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Get a jsondata by its documentId");
 
 app.MapPost("api/update/json/{id}", JsonHandler.UpdateJsonById)
 .Accepts<dynamic>(json)
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Update an existing jsondata by its Id");
 
 app.MapDelete("api/delete/json/{id}", JsonHandler.DeleteJsonById)
- .Accepts<dynamic>(json)
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
+.Accepts<dynamic>(json)
 .WithDisplayName("Delete jsondata by its Id");
 
 app.MapPost("api/post/document/{group}", FileHandler.PostDocument)
 .Accepts<IFormFile>(formFile)
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Upload a document");
 
 app.MapPost("api/post/image/{group}", FileHandler.PostImage)
 .Accepts<IFormFile>(formFile)
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status400BadRequest)
 .WithDisplayName("Upload a image");
 
 app.MapGet("api/get/document/{id}", FileHandler.GetDocumentById);

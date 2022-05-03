@@ -15,9 +15,9 @@ namespace EspraAPI.Handlers
         public static async Task<object> PostDocument(string group, HttpRequest request, FileService fileService, CancellationToken token)
         {
             if (!request.HasFormContentType)
-                return Results.BadRequest();
+                return Results.NoContent();
 
-            var form = await request.ReadFormAsync();
+            var form = await request.ReadFormAsync(cancellationToken: token);
 
             var document = form.Files.First(i => i != null && i.Length > 0);
 
@@ -47,10 +47,12 @@ namespace EspraAPI.Handlers
         [Authorize(Roles = "Admin")]
         public static async Task<object> PostImage(string group, HttpRequest request, FileService fileService, CancellationToken token)
         {
-            if (!request.HasFormContentType)
-                return Results.BadRequest();
+            token.ThrowIfCancellationRequested();
 
-            var form = await request.ReadFormAsync();
+            if (!request.HasFormContentType)
+                return Results.NoContent();
+
+            var form = await request.ReadFormAsync(cancellationToken: token);
 
             var image = form.Files.First(i => i != null && i.Length > 0);
 
@@ -72,6 +74,8 @@ namespace EspraAPI.Handlers
         [Authorize(Roles = "Admin")]
         public static async Task<object> GetImageById(string id, FileService fileService, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
+
             var documentData = await fileService.GetImageByIdAsync(id, token);
 
             return Results.File(documentData.Item1, documentData.Item2);
