@@ -31,7 +31,9 @@ namespace EspraAPI.Service
         {
             token.ThrowIfCancellationRequested();
 
-            return await (await JsonCollection.FindAsync(i => i.Id.Equals(id), cancellationToken: token)).FirstOrDefaultAsync(token);
+            JsonCollection = Database.GetCollection<JsonData>(CollectionName);
+
+            return await (await JsonCollection.FindAsync(i => i.Id == id, cancellationToken: token)).FirstOrDefaultAsync(token);
         }
 
         public async Task<bool> AddAsync(string group, dynamic content, CancellationToken token)
