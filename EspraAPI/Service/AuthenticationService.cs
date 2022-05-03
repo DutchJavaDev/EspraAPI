@@ -20,7 +20,7 @@ namespace EspraAPI.Service
                     Message = "InValid form"
                 };
 
-            var user = await UserManager.FindByEmailAsync(loginModel.UserName);
+            var user = await UserManager.FindByEmailAsync(loginModel.Email);
 
             if (user == null)
                 return new LoginResponse 
